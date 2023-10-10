@@ -73,36 +73,35 @@ class QuestMain extends PluginBase implements Listener {
     }
 
     /**
-     * @throws \JsonException
-     */
+    * @throws \JsonException
+    */
     public function completeQuest(Player $player, $questName) {
-        $questData = $this->quests->get($questName);
+    $questData = $this->quests->get($questName);
 
-        if (!$questData) {
-            $player->sendMessage("This quest does not exist!");
+    if (!$questData) {
+        $player->sendMessage("This quest does not exist!");
+        return;
+    }
+
+    if ($questData["player"] !== $player->getName()) {
+        $player->sendMessage("You can't complete this quest!");
+        return;
+    }
+
+    foreach ($questData["rewards"] as $reward) {
+        $command = "give " . $player->getName() . " " . $reward;
+        $result = Server::getInstance()->dispatchCommand($player, $command); // Use $player as the command sender
+        if ($result === false) {
+            $this->getLogger()->error("Error executing reward command: $command");
+            $player->sendMessage("An error occurred while giving rewards. Please contact an administrator.");
             return;
         }
+    }
 
-        if ($questData["player"] !== $player->getName()) {
-            $player->sendMessage("You can't complete this quest!");
-            return;
-        }
+    $this->quests->remove($questName);
+    $this->quests->save();
 
-        foreach ($questData["rewards"] as $reward) {
-            $command = "give " . $player->getName() . " " . $reward;
-            $commandSender = new ConsoleCommandSender($this->getServer(), $this->getServer()->getLanguage());
-            $result = Server::getInstance()->dispatchCommand($commandSender, $command);
-            if ($result === false) {
-                $this->getLogger()->error("Error executing reward command: $command");
-                $player->sendMessage("An error occurred while giving rewards. Please contact an administrator.");
-                return;
-            }
-        }
-
-        $this->quests->remove($questName);
-        $this->quests->save();
-
-        $player->sendMessage("You have completed the quest '$questName'!");
+    $player->sendMessage("You have completed the quest '$questName'!");
     }
 
     /**
